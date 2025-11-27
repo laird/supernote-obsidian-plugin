@@ -22,17 +22,17 @@ function generateTimestamp(): string {
 }
 
 function dataUrlToBuffer(dataUrl: string): ArrayBuffer {
-    // Remove data URL prefix (e.g., "data:image/png;base64,")
-    const base64 = dataUrl.split(',')[1];
-    // Convert base64 to binary string
-    const binaryString = atob(base64);
-    // Create buffer and view
-    const bytes = new Uint8Array(binaryString.length);
-    // Convert binary string to buffer
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
+	// Remove data URL prefix (e.g., "data:image/png;base64,")
+	const base64 = dataUrl.split(',')[1];
+	// Convert base64 to binary string
+	const binaryString = atob(base64);
+	// Create buffer and view
+	const bytes = new Uint8Array(binaryString.length);
+	// Convert binary string to buffer
+	for (let i = 0; i < binaryString.length; i++) {
+		bytes[i] = binaryString.charCodeAt(i);
+	}
+	return bytes.buffer;
 }
 
 /**
@@ -51,90 +51,90 @@ function processSupernoteText(text: string, settings: SupernotePluginSettings): 
 }
 
 export class WorkerPool {
-    private workers: Worker[];
+	private workers: Worker[];
 
-    constructor(private maxWorkers: number = navigator.hardwareConcurrency) {
-        this.workers = Array(maxWorkers).fill(null).map(() =>
-            new Worker()
-        );
-    }
+	constructor(private maxWorkers: number = navigator.hardwareConcurrency) {
+		this.workers = Array(maxWorkers).fill(null).map(() =>
+			new Worker()
+		);
+	}
 
-    private processChunk(worker: Worker, note: SupernoteX, pageNumbers: number[]): Promise<any[]> {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
+	private processChunk(worker: Worker, note: SupernoteX, pageNumbers: number[]): Promise<any[]> {
+		return new Promise((resolve, reject) => {
+			const startTime = Date.now();
 
-            worker.onmessage = (e: MessageEvent<SupernoteWorkerResponse>) => {
-                const duration = Date.now() - startTime;
-                //console.log(`Processed pages ${pageNumbers.join(',')} in ${duration}ms`);
+			worker.onmessage = (e: MessageEvent<SupernoteWorkerResponse>) => {
+				const duration = Date.now() - startTime;
+				//console.log(`Processed pages ${pageNumbers.join(',')} in ${duration}ms`);
 
-                if (e.data.error) {
-                    reject(new Error(e.data.error));
-                } else {
-                    resolve(e.data.images);
-                }
-            };
+				if (e.data.error) {
+					reject(new Error(e.data.error));
+				} else {
+					resolve(e.data.images);
+				}
+			};
 
-            worker.onerror = (error) => {
-                console.error('Worker error:', error);
-                reject(error);
-            };
+			worker.onerror = (error) => {
+				console.error('Worker error:', error);
+				reject(error);
+			};
 
-            const message: SupernoteWorkerMessage = {
-                type: 'convert',
-                note,
-                pageNumbers
-            };
+			const message: SupernoteWorkerMessage = {
+				type: 'convert',
+				note,
+				pageNumbers
+			};
 
-            worker.postMessage(message);
-        });
-    }
+			worker.postMessage(message);
+		});
+	}
 
-    async processPages(note: SupernoteX, allPageNumbers: number[]): Promise<any[]> {
-        //console.time('Total processing time');
+	async processPages(note: SupernoteX, allPageNumbers: number[]): Promise<any[]> {
+		//console.time('Total processing time');
 
-        // Split pages into chunks based on number of workers
-        const chunkSize = Math.ceil(allPageNumbers.length / this.workers.length);
-        const chunks: number[][] = [];
+		// Split pages into chunks based on number of workers
+		const chunkSize = Math.ceil(allPageNumbers.length / this.workers.length);
+		const chunks: number[][] = [];
 
-        for (let i = 0; i < allPageNumbers.length; i += chunkSize) {
-            chunks.push(allPageNumbers.slice(i, i + chunkSize));
-        }
+		for (let i = 0; i < allPageNumbers.length; i += chunkSize) {
+			chunks.push(allPageNumbers.slice(i, i + chunkSize));
+		}
 
-        //console.log(`Processing ${allPageNumbers.length} pages in ${chunks.length} chunks`);
+		//console.log(`Processing ${allPageNumbers.length} pages in ${chunks.length} chunks`);
 
-        // Process chunks in parallel using available workers
-        const results = await Promise.all(
-            chunks.map((chunk, index) =>
-                this.processChunk(this.workers[index % this.workers.length], note, chunk)
-            )
-        );
+		// Process chunks in parallel using available workers
+		const results = await Promise.all(
+			chunks.map((chunk, index) =>
+				this.processChunk(this.workers[index % this.workers.length], note, chunk)
+			)
+		);
 
-        //console.timeEnd('Total processing time');
-        return results.flat();
-    }
+		//console.timeEnd('Total processing time');
+		return results.flat();
+	}
 
-    terminate() {
-        this.workers.forEach(worker => worker.terminate());
-        this.workers = [];
-    }
+	terminate() {
+		this.workers.forEach(worker => worker.terminate());
+		this.workers = [];
+	}
 }
 
 export class ImageConverter {
-    private workerPool: WorkerPool;
+	private workerPool: WorkerPool;
 
-    constructor(maxWorkers = navigator.hardwareConcurrency) {  // Default to 4 workers
-        this.workerPool = new WorkerPool(maxWorkers);
-    }
+	constructor(maxWorkers = navigator.hardwareConcurrency) {  // Default to 4 workers
+		this.workerPool = new WorkerPool(maxWorkers);
+	}
 
-    async convertToImages(note: SupernoteX, pageNumbers?: number[]): Promise<any[]> {
-        const pages = pageNumbers ?? Array.from({length: note.pages.length}, (_, i) => i+1);
-        const results = await this.workerPool.processPages(note, pages);
-        return results;
-    }
+	async convertToImages(note: SupernoteX, pageNumbers?: number[]): Promise<any[]> {
+		const pages = pageNumbers ?? Array.from({ length: note.pages.length }, (_, i) => i + 1);
+		const results = await this.workerPool.processPages(note, pages);
+		return results;
+	}
 
-    terminate() {
-        this.workerPool.terminate();
-    }
+	terminate() {
+		this.workerPool.terminate();
+	}
 }
 
 class VaultWriter {
@@ -164,6 +164,48 @@ class VaultWriter {
 			if (sn.pages[i].text !== undefined && sn.pages[i].text.length > 0) {
 				content += `${processSupernoteText(sn.pages[i].text, this.settings)}\n`;
 			}
+
+			// Add links found on this page
+			if (sn.links && Object.keys(sn.links).length > 0) {
+				const pageLinks: any[] = [];
+				Object.entries(sn.links).forEach(([key, linkArray]) => {
+					linkArray.forEach(link => {
+						// Check if this link is on the current page (i+1 since pages are 1-indexed in PAGEID)
+						if (link.PAGEID && sn.pages[i].PAGEID && link.PAGEID === sn.pages[i].PAGEID) {
+							pageLinks.push(link);
+						}
+					});
+				});
+
+				if (pageLinks.length > 0) {
+					content += `\n### Links\n\n`;
+					pageLinks.forEach(link => {
+						const targetPage = link.OBJPAGE || 'unknown';
+						const targetFile = link.decodedFilePath || 'current file';
+						const linkText = `→ Page ${targetPage}`;
+
+						// Try to create an Obsidian link if the target file exists
+						if (link.decodedFilePath) {
+							const basename = link.decodedFilePath.split('/').pop()?.replace('.note', '') || '';
+							const targetNoteFile = this.app.vault.getFiles().find(f =>
+								f.basename === basename || f.path.includes(basename)
+							);
+
+							if (targetNoteFile) {
+								// Create wikilink to the target note
+								content += `- [[${targetNoteFile.basename}#Page ${targetPage}|${linkText}]]\n`;
+							} else {
+								content += `- ${linkText} in \`${basename}\`\n`;
+							}
+						} else {
+							// Internal link to another page in the same note
+							content += `- ${linkText}\n`;
+						}
+					});
+					content += '\n';
+				}
+			}
+
 			if (imgs) {
 				let subpath = '';
 				if (this.settings.invertColorsWhenDark) {
@@ -359,7 +401,7 @@ export class SupernoteView extends FileView {
 				// If Collapse Text setting is enabled, place the text into an HTML `details` element
 				if (this.settings.collapseRecognizedText) {
 					text = pageContainer.createEl('details', {
-						text: '\n' + processSupernoteText(sn.pages[i].text,this.settings),
+						text: '\n' + processSupernoteText(sn.pages[i].text, this.settings),
 						cls: 'page-recognized-text',
 					});
 					text.createEl('summary', { text: `Page ${i + 1} Recognized Text` });
@@ -379,6 +421,83 @@ export class SupernoteView extends FileView {
 			}
 			imgElement.setAttr('style', 'max-height: ' + this.settings.noteImageMaxDim + 'px;')
 			imgElement.draggable = true;
+
+			// Add clickable link overlays
+			if (sn.links && Object.keys(sn.links).length > 0) {
+				const currentPageId = sn.pages[i].PAGEID;
+				if (currentPageId) {
+					Object.entries(sn.links).forEach(([key, linkArray]) => {
+						linkArray.forEach(link => {
+							if (link.PAGEID === currentPageId) {
+								// Create a clickable overlay for this link
+								const linkOverlay = pageContainer.createEl("div", {
+									cls: 'supernote-link-overlay',
+								});
+
+								// Position the overlay using LINKRECT [x, y, width, height]
+								if (link.LINKRECT && link.LINKRECT.length === 4) {
+									const [x, y, width, height] = link.LINKRECT;
+									// Scale coordinates to match the displayed image size
+									const scaleX = this.settings.noteImageMaxDim / sn.pageWidth;
+									const scaleY = this.settings.noteImageMaxDim / sn.pageHeight;
+
+									linkOverlay.setAttr('style', `
+										position: absolute;
+										left: ${parseInt(x) * scaleX}px;
+										top: ${parseInt(y) * scaleY}px;
+										width: ${parseInt(width) * scaleX}px;
+										height: ${parseInt(height) * scaleY}px;
+										background-color: rgba(0, 123, 255, 0.1);
+										border: 2px solid rgba(0, 123, 255, 0.3);
+										cursor: pointer;
+										transition: all 0.2s ease;
+									`);
+
+									linkOverlay.addEventListener('mouseenter', () => {
+										linkOverlay.setAttr('style', `
+											position: absolute;
+											left: ${parseInt(x) * scaleX}px;
+											top: ${parseInt(y) * scaleY}px;
+											width: ${parseInt(width) * scaleX}px;
+											height: ${parseInt(height) * scaleY}px;
+											background-color: rgba(0, 123, 255, 0.2);
+											border: 2px solid rgba(0, 123, 255, 0.6);
+											cursor: pointer;
+											transition: all 0.2s ease;
+										`);
+									});
+
+									linkOverlay.addEventListener('mouseleave', () => {
+										linkOverlay.setAttr('style', `
+											position: absolute;
+											left: ${parseInt(x) * scaleX}px;
+											top: ${parseInt(y) * scaleY}px;
+											width: ${parseInt(width) * scaleX}px;
+											height: ${parseInt(height) * scaleY}px;
+											background-color: rgba(0, 123, 255, 0.1);
+											border: 2px solid rgba(0, 123, 255, 0.3);
+											cursor: pointer;
+											transition: all 0.2s ease;
+										`);
+									});
+								}
+
+								// Add click handler to navigate to target page
+								const targetPage = parseInt(link.OBJPAGE) || 1;
+								linkOverlay.setAttribute('title', `Link to page ${targetPage}`);
+
+								linkOverlay.addEventListener('click', () => {
+									// Scroll to target page
+									const targetPageEl = container.querySelector(`#page${targetPage}`);
+									if (targetPageEl) {
+										targetPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+									}
+								});
+							}
+						});
+					});
+				}
+			}
 
 			// Create a button to save image to vault
 			if (this.settings.showExportButtons) {
@@ -403,8 +522,8 @@ export default class SupernotePlugin extends Plugin {
 	settings: SupernotePluginSettings;
 
 	async onload() {
-        // Install polyfills before any other code runs
-        installAtPolyfill();
+		// Install polyfills before any other code runs
+		installAtPolyfill();
 
 		await this.loadSettings();
 		vw = new VaultWriter(this.app, this.settings);
